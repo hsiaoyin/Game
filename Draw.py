@@ -62,9 +62,7 @@ class Setup():
         self.InYN=False
 
 
-
-import csv
-import Input
+import sqlite3
 import pygame_textinput
 import pygame
 import random
@@ -164,13 +162,15 @@ while not done0:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT and Case==2:
                 done0=True
+                NoInsurance=False
             elif event.key ==pygame.K_DOWN:
                 Case=2
             elif event.key ==pygame.K_UP and Case==2:
                 done0=True
                 done1=True
                 done2=True
-                InitialSetup.money=OrigwInsurance
+                NoInsurance=True
+
 
 
 
@@ -292,10 +292,12 @@ while not done1:
     screen.blit(text9,[Left,160])
     pygame.display.flip()
 
-InitialSetup=Setup()
 
+InitialSetup=Setup()
     ######################################################################################################
 while not done2:
+
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done2 = True
@@ -385,14 +387,17 @@ while not done2:
     pygame.display.flip()
 ##########################################################################################################
 textinput = pygame_textinput.TextInput()
-
+Enter=1
 while not done:
     # --- Main event loop
     screen.fill(WHITE)
     pygame.draw.rect(screen, GREEN, [0,0,10000,7000])
+    money=InitialSetup.money
+    if NoInsurance==True:
+        money=OrigwInsurance
 
     text4= font.render("Thanks for the participation!",True,BLACK)
-    text5= font.render("You won CHF"+str(InitialSetup.money),True,RED)
+    text5= font.render("You won CHF"+str(money),True,RED)
 
     screen.blit(text4,TopPosition)
     screen.blit(text5, SecondTop)
@@ -412,17 +417,34 @@ while not done:
                 #writer.writerow({'Name': name, 'FinalResult': InitialSetup.money,"Behavior":InitialSetup.InsuranceList})
 
             exit()
-
+        elif event.key ==pygame.K_KP_ENTER:
+            Enter=0
     # Feed it with events every frame
 
     # Blit its surface onto the screen
-    text4= font.render("Please enter your name, and tell us that you have completed",True,BLACK)
-    screen.blit(text4,[100,400])
+    while Enter==1:
+        text4= font.render("Please enter your name, and tell us that you have completed",True,BLACK)
+        screen.blit(text4,[100,400])
 
-    pygame.draw.line(screen, WHITE, [0,300], [7000,300], 50)
-    textinput.update(events)
-    name=textinput.get_text()
-    screen.blit(textinput.get_surface(), (50, 300))
-    pygame.display.update()
-    screen.blit(text4,[50,200])
+        pygame.draw.line(screen, WHITE, [0,300], [7000,300], 50)
+        textinput.update(events)
+        name=textinput.get_text()
+        screen.blit(textinput.get_surface(), (50, 300))
+        pygame.display.update()
+        screen.blit(text4,[50,200])
+
+    #import os
+
+    conn=sqlite3.connect('result.db')
+    cur=conn.cursor() #handle
+
+    try:
+        cur.execute('''CREATE TABLE TempResult (ID Text, ResultMoney numeric, Insurance, text )''')
+    except:
+        a=0
+    cur.execute('''insert into TempResult (ID,ResultMoney) values ("check",123)''')
+
+
+    conn.commit()
+
     clock.tick(60)

@@ -9,7 +9,7 @@ try:
 except:
     a=0
 cur.execute('''insert into Users2 (ID,ResultMoney) values ("check",123)''')
-print(str(datetime.now()))
+
 
 conn.commit()
 

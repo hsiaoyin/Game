@@ -1,17 +1,3 @@
-#Insurance Parameter
-OrigwInsurance=12 #Number of block
-OrigProb=0.05
-Times=5
-Prob=OrigProb/(OrigwInsurance+Times)
-Prob2=Prob*Times
-Premium=1.5
-WinsP=12.5
-OrigMoney=20
-
-def DrawBridge(i,color):
-    pygame.draw.line(screen, color, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
-
-
 def TommyFigure(screen,moving_x,moving_y,Press):
     pygame.draw.ellipse(screen,BLACK,[65+moving_x,15+moving_y,50,50])
     #Body
@@ -37,36 +23,21 @@ def Background():
     pygame.draw.line(screen, BLACK, [0,230+space], [1150,230+space], 5)
     pygame.draw.line(screen, BLACK, [0,370+space], [1150,370+space], 5)
     pygame.draw.rect(screen, GREEN, [0,0,165,7000])
-    pygame.draw.rect(screen, GREEN, [1100,0,7000,7000])
+    pygame.draw.rect(screen, GREEN, [1150,0,7000,7000])
 
     for i in range(13):
-        DrawBridge(i,BRIDGE_C)
-    DrawBridge(3,GRAY_C)
-    DrawBridge(0,GREEN)
+        if i==3:
+            pygame.draw.line(screen, GRAY_C, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
+        elif i==0:
+            pygame.draw.line(screen, GREEN, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
+        else:
+            pygame.draw.line(screen, BRIDGE_C, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
 
 
-
-
-class Setup():
-
-    def __init__(self):
-        self.moving_x=18
-        self.moving_y=250
-        self.Fall=0
-        self.Press=False
-        self.Bomp=False
-        self.Count=0
-        self.money=OrigMoney
-        self.Buy=0
-        self.InsuranceList=list()
-        self.InYN=False
-
-
-import sqlite3
+import csv
 import pygame_textinput
 import pygame
 import random
-
 # Define some colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -81,16 +52,20 @@ pygame.init()
 
 # Set the width and height of the screen [width, height] and other game parameters
 size = (7000, 7000)
-Left=200
-SecondLeft=1110
-HeadPosition=[Left+20,30]
-SecondPosition=[Left,800]
-SecondTop=[Left,140]
-TopPosition=[Left, 80]
-
 screen = pygame.display.set_mode(size)
 clock = pygame.time.Clock()
+moving_x=18
+moving_y=250
 Speed=80
+Fall=0
+Press=False
+Bomp=False
+Count=0
+HeadPosition=[200,30]
+SecondPosition=[230,800]
+SecondTop=[230,140]
+TopPosition=[230, 80]
+BotPosition=[1100,250]
 FallSpeed=-30
 pygame.display.set_caption("Tommy Crossing Bridge")
 font = pygame.font.SysFont('Calibri', 25, True, False)
@@ -98,11 +73,32 @@ font1 = pygame.font.SysFont('Calibri', 50, True, False)
 Space1=500
 Space2=Space1-150
 
+#Parameter for insurance
+OrigwInsurance=12
+OrigProb=0.05
+Times=5
+Prob=OrigProb/(OrigwInsurance+Times)
+Prob2=Prob*Times
+OrigMoney=20
+money=OrigMoney
+Premium=1.5
+WinsP=12.5
+
+#To begin
+x=0
+Buy=0
+InsuranceList=list()
+done0=False
+done1=False
+done2=False
+done=False
+InYN=False
+done = False
+
+
 #Words
-TommyMoney="When Tommy arrives, "
+TommyMoney="When Tommy arrives, you will get "
 TommyMoney=font.render(TommyMoney,True,BLACK)
-TommyMoney2="you will get "
-TommyMoney2=font.render(TommyMoney2,True,BLACK)
 BuyInsurance=". To buy for the next one, press UP"
 InsurSale="One block costs CHF"
 InsurSale= font.render(InsurSale+str(Premium)+BuyInsurance,True,RED)
@@ -124,12 +120,16 @@ you can still buy individual block insurance separately when Tommy is on the bri
 This insurance per block costs CHF "+str(Premium)+". \n\
 Press DOWN to continue"
 BackText="You can check on the right side the money you will earn when Tommy crosses the bridge"
+
+#
 RuleText=RuleText.splitlines()
+
 IntroText=\
 " Press UP if you prefer an insurance. (In this case, you will get paid CHF "+str(WinsP)+"!) \n \
 Otherwise press RIGHT to help Tommy cross the bridge. \n\
 (You can buy insurance per block on the way)!"
 IntroText=IntroText.splitlines()
+
 TommyText="Tommy is going to bring you the money"
 TommyBridge="Tommy is going to bring you the money but the bridge may fall with 5% probability"
 TommyText= font.render(TommyText,True,BLACK)
@@ -139,16 +139,14 @@ Practice= font.render(Practice,True,InsBridge_C)
 InsNoBomp= font1.render("The block is safe but you are insured anyway" ,True,RED)
 InsBomp= font1.render("The block is broken but luckily you are insured" ,True,RED)
 
-#To begin
-done0=False
-done1=False
-done2=False
-done=False
+# Used to manage how fast the screen updates
 
-######################################################################################################
-InitialSetup=Setup()
+
+
 
 Case=1
+# -------- Main Program Loop -----------
+# Loop until the user clicks the close button.
 
 space=Space1
 
@@ -160,33 +158,36 @@ while not done0:
             done2= True
             done=True
         elif event.type == pygame.KEYDOWN:
+        # Figure out if it was an arrow key. If so
+        # adjust speed.
             if event.key == pygame.K_RIGHT and Case==2:
                 done0=True
-                NoInsurance=False
             elif event.key ==pygame.K_DOWN:
                 Case=2
             elif event.key ==pygame.K_UP and Case==2:
                 done0=True
                 done1=True
                 done2=True
-                NoInsurance=True
-
+                money=OrigwInsurance
 
 
 
     Background()
 
-    TommyFigure(screen,InitialSetup.moving_x,InitialSetup.moving_y+space-100,InitialSetup.Press)
+    TommyFigure(screen,moving_x,moving_y+space-100,Press)
+    #screen.blit(TommyBridge,HeadPosition)
 
     tempText=Introduction(Case)
     for i in range(len(tempText)):
         text7= font.render(tempText[i],True,DarkRed)
-        screen.blit(text7, [Left, space-400+i*40])
+        screen.blit(text7, [200, space-400+i*40])
 
-
+    #screen.blit()
     pygame.display.flip()
 
-#######################################################################################################
+        # --- Limit to 60 frames per second
+    clock.tick(60)
+#####################################################Practice Demo#############
 space=Space2
 result=0
 while not done1:
@@ -199,57 +200,78 @@ while not done1:
 
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT and (InitialSetup.Count==0 or InitialSetup.Buy==1 or InitialSetup.Count==3):# or result==0):
-                print(InitialSetup.Count,InitialSetup.Buy,result)
+            # Figure out if it was an arrow key. If so
+            # adjust speed.
+            if event.key == pygame.K_RIGHT and (Count==0 or Buy==1 or Count==3):# or result==0):
+                print(Count,Buy,result)
                 if result==0:
                     result=1
-                    InitialSetup.Buy=0
+
+                    Buy=0
                 else:
-                    InitialSetup.Count=InitialSetup.Count+1
-                    InitialSetup.moving_x=InitialSetup.moving_x+Speed
-                    InitialSetup.Press=True
+                    Count=Count+1
+                    moving_x=moving_x+Speed
+                    Press=True
                     result=0
 
-                    if InitialSetup.Count==4:
-                        InitialSetup.Bomp=True
-                        InitialSetup.Fall=FallSpeed
-                        InitialSetup.money=0
+                    if Count==4:
+                        Bomp=True
+                        Fall=FallSpeed
+                        money=0
 
-                    elif InitialSetup.Count==2:
-                        InitialSetup.Bomp==False
-                        InitialSetup.InYN=True
+                    elif Count==2:
+                        Bomp==False
+                        InYN=True
 
-                    elif InitialSetup.Count==3:
-                        InitialSetup.Bomp=False
-                        InitialSetup.InYN=False
+                    elif Count==3:
+                        Bomp=False
+                        InYN=False
 
-            elif event.key == pygame.K_UP and (InitialSetup.Count==1 or InitialSetup.Count==2) and  InitialSetup.Buy==0:
-                InitialSetup.Buy=1
-                InitialSetup.money=InitialSetup.money-Premium
-                InitialSetup.InsuranceList.append(InitialSetup.Count+1)
+
+
+
+
+                #elif event.key == pygame.K_LEFT:
+                #    moving_x=moving_x-Speed
+
+            elif event.key == pygame.K_UP and (Count==1 or Count==2) and  Buy==0:
+                Buy=1
+                money=money-Premium
+                InsuranceList.append(Count+1)
                 result=1
 
-            elif event.key ==pygame.K_DOWN and InitialSetup.Count==4:
+            elif event.key ==pygame.K_DOWN and Count==4:
                 done1=True
 
-            elif event.key==pygame.K_LEFT and InitialSetup.Count==4:
-                InitialSetup=Setup()
+            elif event.key==pygame.K_LEFT and Count==4:
+                moving_x=18
+                moving_y=250
+                Fall=0
+                Press=False
+                Bomp=False
+                Count=0
+                money=OrigMoney
+                Buy=0
+                InsuranceList=list()
+                InYN=False
+
 
     Background()
 
+    text4= font1.render(" CHF"+str(money),True,RED)
 
-    text4= font1.render(" CHF"+str(InitialSetup.money),True,RED)
-
+    #text6= font.render(FinText+str(money),True,RED)
     extrainfo=""
-    screen.blit(TommyMoney, [SecondLeft,200])
-    screen.blit(TommyMoney2, [SecondLeft,250])
-    screen.blit(text4, [SecondLeft,300])
+    screen.blit(TommyMoney, BotPosition)
+    screen.blit(text4, [1100,300])
 #Draw Bridge
-    for i in InitialSetup.InsuranceList:
-        DrawBridge(i,InsBridge_C)
 
-    TommyFigure(screen,InitialSetup.moving_x,InitialSetup.moving_y+space-100,InitialSetup.Press)
-    InitialSetup.moving_y -=InitialSetup.Fall
+    for i in InsuranceList:
+        pygame.draw.line(screen, InsBridge_C, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
+
+    TommyFigure(screen,moving_x,moving_y+space-100,Press)
+    pygame.draw.line(screen, InsBridge_C, [0,200], [1000,200], 3)
+    moving_y -=Fall
 
     extrainfo="Crossing without insurance "
     extrainfo1="Press RIGHT"
@@ -259,142 +281,183 @@ while not done1:
         extrainfo=BackText
         extrainfo1="press RIGHT to continue:"#
 
-    if InitialSetup.Count==1:
+    if Count==1:
 
         extrainfo="Next: to acquire individual insurance"
         extrainfo1="Press UP to get insured and RIGHT to continue:"
 
-    elif InitialSetup.Count==2:
+    elif Count==2:
         if result==0:
             screen.blit(InsNoBomp,SecondPosition)
         else:
             extrainfo="Next: You are insured while the block is broken"
             extrainfo1="press UP to get insured and RIGHT to continue:"
 
-    elif InitialSetup.Count==3:
+    elif Count==3:
         if result==0:
-            InitialSetup.Bomp=True
+            Bomp=True
             screen.blit(InsBomp,SecondPosition)
         else:
             extrainfo="Next: Crossing while the block is broken"
 
-    elif InitialSetup.Count==4:
-        InitialSetup.Bomp=False
+        #screen.blit(BuyInsurance, [50, 500])
+        #screen.blit(InsurSale, [200,550])
+
+    elif Count==4:
+        Bomp=False
         screen.blit(BompText, SecondPosition)
         extrainfo="End of Demo, Press DOWN to start the game"
         extrainfo1="Or press LEFT to replay the demo again"
 
     text8= font.render(extrainfo,True,DarkRed)
     text9= font.render(extrainfo1,True,RED)
+# Put the image of the text on the screen at 250x250
 
     screen.blit(Practice, TopPosition)
-    screen.blit(text8,[Left,130])
-    screen.blit(text9,[Left,160])
+    screen.blit(text8,[180,130])
+    screen.blit(text9,[180,160])
+    #if moving_x+10>990:
+    #    moving_x=590
+
+
+
+    # --- Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
 
+    # --- Limit to 60 frames per second
+    clock.tick(60)
+moving_x=18
+moving_y=250
+Fall=0
+Press=False
+Bomp=False
+Count=0
+money=OrigMoney
+Buy=0
+InsuranceList=list()
+InYN=False
 
-InitialSetup=Setup()
-    ######################################################################################################
+#################FIRST Game##################Demo##################
 while not done2:
-
-
+    # --- Main event loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done2 = True
             done=True
+    # User pressed down on a key
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RIGHT and InitialSetup.Count<12:
-                InitialSetup.moving_x=InitialSetup.moving_x+Speed
-                InitialSetup.Press=True
-                InitialSetup.Count=InitialSetup.Count+1
+        # Figure out if it was an arrow key. If so
+        # adjust speed.
+            if event.key == pygame.K_RIGHT and Count<12:
+                moving_x=moving_x+Speed
+                Press=True
+                Count=Count+1
                 x=random.random()
 
-                if InitialSetup.Count==3:
-                    InitialSetup.Bomp=x<Prob2
+                if Count==3:
+                    Bomp=x<Prob2
                 else:
-                    InitialSetup.Bomp=x<Prob
+                    Bomp=x<Prob
 
-                if InitialSetup.Buy==1:
-                    if InitialSetup.Bomp==True:
-                        InitialSetup.InYn=True
+                if Buy==1:
+                    if Bomp==True:
+                        InYN=True
                     else:
-                        InitialSetup.InYn=False
-                    InitialSetup.Bomp=False
-                    InitialSetup.Buy=0
+                        InYN=False
+                    Bomp=False
+                    Buy=0
 
-                print(x,InitialSetup.Bomp,Prob,InitialSetup.Count,InitialSetup.InsuranceList,InitialSetup.Buy)
-                if InitialSetup.Bomp==True:
-                    InitialSetup.Fall=FallSpeed
-                    InitialSetup.money=0
+                print(x,Bomp,Prob,Count,InsuranceList,Buy)
+                if Bomp==True:
+                    Fall=FallSpeed
+                    money=0
+            #elif event.key == pygame.K_LEFT:
+            #    moving_x=moving_x-Speed
 
-            elif event.key == pygame.K_UP and InitialSetup.Count<11:
-                InitialSetup.Buy=1
-                InitialSetup.money=InitialSetup.money-Premium
-                InitialSetup.InsuranceList.append(InitialSetup.Count+1)
+            elif event.key == pygame.K_UP and Count<11:
+                Buy=1
+                money=money-Premium
+                InsuranceList.append(Count+1)
 
-            elif event.key ==pygame.K_DOWN and InitialSetup.Count>=11:
+            elif event.key ==pygame.K_DOWN and Count>=11:
                 done2=True
 
 
     Background()
 
-    text4= font1.render(" CHF"+str(InitialSetup.money),True,RED)
-    text6= font1.render(FinText+str(InitialSetup.money)+"!" ,True,RED)
+
+
+
+
+
+
+    text4= font1.render(" CHF"+str(money),True,RED)
+    text6= font1.render(FinText+str(money)+"!" ,True,RED)
     text5= font1.render("Press DOWN to continue" ,True,BLACK)
 
-    screen.blit(TommyMoney, [SecondLeft,200])
-    screen.blit(TommyMoney2, [SecondLeft,250])
-    screen.blit(text4, [SecondLeft,300])
+    screen.blit(TommyMoney, BotPosition)
+
+    screen.blit(text4, [1100,300])
+
+# Put the image of the text on the screen at 250x250
+#Draw Bridge
+
+    for i in InsuranceList:
+        pygame.draw.line(screen, InsBridge_C, [100+i*Speed,400+space], [130+i*Speed,200+space], 60)
+
+    TommyFigure(screen,moving_x,moving_y+space-100,Press)
 
 
-    for i in InitialSetup.InsuranceList:
-        DrawBridge(i,InsBridge_C)
-
-    TommyFigure(screen,InitialSetup.moving_x,InitialSetup.moving_y+space-100,InitialSetup.Press)
-
-
-    if InitialSetup.Bomp==True:
+    if Bomp==True:
         screen.blit(BompText, SecondPosition)
 
-    elif InitialSetup.Count==12:
+    elif Count==12:
         screen.blit(text6,SecondPosition)
         screen.blit(text5, SecondTop)
 
-    elif InitialSetup.Count==2:
+    elif Count==2:
         text= font1.render("Light brown block is twice the breaking probability" ,True,RED)
         screen.blit(text, TopPosition)
         screen.blit(InsurSale, SecondTop)
-        if InitialSetup.Count in InitialSetup.InsuranceList:
-            if InitialSetup.InYn==True:
+        if Count in InsuranceList:
+            if InYN==True:
                 screen.blit(InsBomp,SecondPosition)
             else:
                 screen.blit(InsNoBomp,SecondPosition)
 
 
 
-    elif InitialSetup.Press==True:
+    elif Press==True:
         screen.blit(InsurSale, TopPosition)
-        if InitialSetup.Count in InitialSetup.InsuranceList:
-            if InitialSetup.InYn==True:
+        if Count in InsuranceList:
+            if InYN==True:
                 screen.blit(InsBomp,SecondPosition)
             else:
                 screen.blit(InsNoBomp,SecondPosition)
 
 
-    InitialSetup.moving_y -=InitialSetup.Fall
+    moving_y -=Fall
 
 
+
+
+    #if moving_x+10>990:
+    #    moving_x=590
+
+
+    # --- Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
-##########################################################################################################
+
+    # --- Limit to 60 frames per second
+    clock.tick(60)
+
+
 textinput = pygame_textinput.TextInput()
-Enter=1
+##########################################Confirmation page
 while not done:
     # --- Main event loop
     screen.fill(WHITE)
     pygame.draw.rect(screen, GREEN, [0,0,10000,7000])
-    money=InitialSetup.money
-    if NoInsurance==True:
-        money=OrigwInsurance
 
     text4= font.render("Thanks for the participation!",True,BLACK)
     text5= font.render("You won CHF"+str(money),True,RED)
@@ -403,48 +466,53 @@ while not done:
     screen.blit(text5, SecondTop)
 
 
-    TommyFigure(screen,100,500,False)
+    moving_x=100
 
+    TommyFigure(screen,moving_x,500,Press)
+
+
+    #for event in pygame.event.get():
+    #    if event.type == pygame.QUIT:
+    #    done = True
 
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
-            #with open('result.csv', newline="") as csvfile:
-                #fieldnames = ['Name', 'FinalResult',"Behavior"]
-                #writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            with open('result.csv', 'w') as csvfile:
+                fieldnames = ['Name', 'FinalResult',"Behavior"]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-                #writer.writeheader()
-                #writer.writerow({'Name': name, 'FinalResult': InitialSetup.money,"Behavior":InitialSetup.InsuranceList})
+                writer.writeheader()
+                writer.writerow({'Name': name, 'FinalResult': money,"Behavior":InsuranceList})
 
             exit()
-        elif event.key ==pygame.K_KP_ENTER:
-            Enter=0
+
     # Feed it with events every frame
 
     # Blit its surface onto the screen
-    while Enter==1:
-        text4= font.render("Please enter your name, and tell us that you have completed",True,BLACK)
-        screen.blit(text4,[100,400])
+    text4= font.render("Please enter your name, and tell us that you have completed",True,BLACK)
+    screen.blit(text4,[100,400])
 
-        pygame.draw.line(screen, WHITE, [0,300], [7000,300], 50)
-        textinput.update(events)
-        name=textinput.get_text()
-        screen.blit(textinput.get_surface(), (50, 300))
-        pygame.display.update()
-        screen.blit(text4,[50,200])
-
-    #import os
-
-    conn=sqlite3.connect('result.db')
-    cur=conn.cursor() #handle
-
-    try:
-        cur.execute('''CREATE TABLE TempResult (ID Text, ResultMoney numeric, Insurance, text )''')
-    except:
-        a=0
-    cur.execute('''insert into TempResult (ID,ResultMoney) values ("check",123)''')
-
-
-    conn.commit()
-
+    pygame.draw.line(screen, WHITE, [0,300], [7000,300], 50)
+    textinput.update(events)
+    name=textinput.get_text()
+    screen.blit(textinput.get_surface(), (50, 300))
+    pygame.display.update()
+    screen.blit(text4,[50,200])
     clock.tick(60)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pygame.quit()
